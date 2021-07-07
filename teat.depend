@@ -1,5 +1,5 @@
 # depslib dependency file v1.0
-1625683919 source:f:\rafsani\new folder\teat\main.cpp
+1625696061 source:f:\rafsani\new folder\teat\main.cpp
 	<stdio.h>
 	<math.h>
 	<iostream>
@@ -16,7 +16,7 @@
 	<limits>
 	<string>
 
-1625686112 f:\rafsani\new folder\teat\1605119_classes.h
+1625699500 f:\rafsani\new folder\teat\1605119_classes.h
 	<bits/stdc++.h>
 	<windows.h>
 	<GL/glut.h>

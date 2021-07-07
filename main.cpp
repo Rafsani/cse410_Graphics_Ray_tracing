@@ -480,7 +480,7 @@ void load_data()
 {
     ifstream file ;
 
-    file.open("F:/Rafsani/New folder/teat/testdata.txt");
+    file.open("F:/Rafsani/New folder/teat/scene.txt");
     string str;
     getline(file,str);
     recursion_level = stoi(str);

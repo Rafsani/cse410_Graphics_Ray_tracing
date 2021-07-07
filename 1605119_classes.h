@@ -391,10 +391,91 @@ public:
     {
 
     }
-    double getTvalue(Ray &ray)
+
+
+    bool cutoff(point intersect1)
     {
+        if(intersect1.x <  cube_reference_point.x && length > 0 )
+        {
+            return true;
+        }
+        else if(intersect1.x >  (cube_reference_point.x + length)  && length > 0)
+        {
+            return true;
+        }
+        else if(intersect1.y <  cube_reference_point.y && width > 0)
+        {
+            return true;
+        }
+        else if(intersect1.y >  (cube_reference_point.y + width)  && width > 0)
+        {
+            return true;
+        }
+        else if(intersect1.z <  cube_reference_point.z  && height > 0)
+        {
+            return true;
+        }
+        else if(intersect1.z >  (cube_reference_point.z + height) && height > 0 )
+        {
+            return true;
+        }
+
+        return false;
 
     }
+
+    double getTvalue(Ray &ray)
+    {
+        /// F(x, y, z) = Ax2 + By2 + Cz2 + Dxy+ Exz + Fyz + Gx + Hy + Iz + J = 0
+        /// Aqt2 + Bqt + Cq = 0
+        /// Aq = Axd2 + Byd2 + Czd2 + Dxdyd + Exdzd + Fydzd
+
+        double a = (A*ray.dir_vect.x*ray.dir_vect.x) + (B * ray.dir_vect.y * ray.dir_vect.y) + (C * ray.dir_vect.z * ray.dir_vect.z ) + (D*ray.dir_vect.x*ray.dir_vect.y)
+                    + (E * ray.dir_vect.x * ray.dir_vect.z ) + (F*ray.dir_vect.y * ray.dir_vect.z);
+
+        double b = (2*A* ray.start.x * ray.dir_vect.x) + (2*B* ray.start.y * ray.dir_vect.y)
+                    + (2*C* ray.start.z * ray.dir_vect.z) + D * (ray.start.x * ray.dir_vect.y + ray.start.y * ray.dir_vect.x)
+                    + E * ( ray.start.x * ray.dir_vect.z + ray.start.z * ray.dir_vect.x )
+                    + F * ( ray.start.y * ray.dir_vect.z + ray.start.z * ray.dir_vect.y )
+                    + G * ray.dir_vect.x + H*ray.dir_vect.y + I* ray.dir_vect.z ;
+
+        double c = (A* ray.start.x * ray.start.x) + (B* ray.start.y *  ray.start.y ) + (C *  ray.start.z *  ray.start.z )
+                    + D* ray.start.x * ray.start.y + E*  ray.start.x * ray.start.z + F *  ray.start.y *  ray.start.z
+                    + G*  ray.start.x + H* ray.start.y  + I *  ray.start.z  + J;
+
+
+        double discriminent = b*b - 4*a*c;
+
+
+
+        if( discriminent < 0) return -1;
+
+        double t0 = (-b - sqrt(discriminent))*1.0 / (2*a);
+        double t1 = (-b + sqrt(discriminent))*1.0 / (2*a);
+        point intersect1 = ray.start + ray.dir_vect * t0;
+        point intersect2 = ray.start + ray.dir_vect * t1;
+        bool in_1  =  cutoff(intersect1);
+        bool in_2 = cutoff(intersect2);
+
+
+        if(in_1 && in_2) return -1;
+        else if(in_1) return t1;
+        else if(in_2) return t0;
+        else return min(t0,t1);
+
+
+
+
+    }
+
+    point normalvect(point intersect)
+    {
+        point p;
+        p.x = 2*A*intersect.x + D*intersect.y + E*intersect.z + G;
+        p.y = 2*B*intersect.y + D*intersect.x + F*intersect.z + H;
+        p.z = 2*C*intersect.z + E*intersect.x + F*intersect.y + I;
+        return normalize_point(p);
+      }
 };
 
 
