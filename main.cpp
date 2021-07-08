@@ -465,7 +465,7 @@ void init()
     glLoadIdentity();
 
     //give PERSPECTIVE parameters
-    gluPerspective(90,	1,	1,	1000.0);
+    gluPerspective(80,	1,	1,	1000.0);
     //field of view in the Y (vertically)
     //aspect ratio that determines the field of view in the X direction (horizontally)
     //near distance
@@ -585,7 +585,7 @@ void capture()
         colorbuffer[i] = new pixelColor[bmp_image_dim];
     }
 
-    double plane_distance = (WINDOW_HEIGHT/2.0)/tan(90*pi/360) ;
+    double plane_distance = (WINDOW_HEIGHT/2.0)/tan(80*pi/360) ;
     // double plane_distance = (WINDOW_HEIGHT/2)/tan((90/2.0) * (pi / 180.0)) ;
     point topleft = pos + (l * plane_distance - r*(WINDOW_WIDTH/2.0) + u * (WINDOW_HEIGHT/2.0) );
 
@@ -609,7 +609,7 @@ void capture()
             if(nearObj[0] != -1)       /// intersected an object
             {
                 int nearest = nearObj[0];
-                objects[nearest]->intersect_method(ray,nearObj[1],p,1);
+                objects[nearest]->intersect_method(ray,nearObj[1],p,1,nearest);
 
                 //cout << i << j  << endl;
             }

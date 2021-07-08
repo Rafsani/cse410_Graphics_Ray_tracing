@@ -4,6 +4,7 @@
 #include<stdlib.h>
 using namespace std;
 extern int recursion_level;
+
 class pixelColor
 {
 public:
@@ -103,6 +104,8 @@ public:
     }
 };
 
+extern vector<double>  get_nearest_intersectingObj(Ray &ray);
+
 class LightSource
 {
 public:
@@ -141,11 +144,11 @@ public:
     double color[3] ;
     double coEfficients[4] ;// reflection coefficients
     int shine ;// exponent term of specular component
-    object() {};
-    virtual void draw() {} ;
-    virtual double getTvalue(Ray &ray) {};
-    virtual point normalvect(point intersect) { };
-    void intersectmethod(Ray &ray,double t, pixelColor color,int level) {};
+    object() {}
+    virtual void draw() {}
+    virtual double getTvalue(Ray &ray) {}
+    virtual point normalvect(point intersect) {}
+    //void intersectmethod(Ray &ray,double t, pixelColor color,int level,int nearest) {}
     void set_properties(double R,double G,double B,double ambient,double diffuse,double speculer,double reflection,double shines)
     {
         color[0]  =R;
@@ -159,7 +162,7 @@ public:
     }
 
 
-    void intersect_method(Ray &ray,double t, pixelColor &p,int level);
+    void intersect_method(Ray &ray,double t, pixelColor &p,int level,int nearest);
 
 
 
@@ -171,32 +174,32 @@ public:
 std::vector <object*> objects;
 std::vector<LightSource> lights;
 
-void object::intersect_method(Ray &ray,double t, pixelColor &p,int level)
+void object::intersect_method(Ray &ray,double t, pixelColor &p,int level,int nearest)
 {
     point intersecting_point = ray.start +(ray.dir_vect * t)  ;
     point normal_atIntercectPoint = normalvect(intersecting_point);
 
-    point reflectedRay = ray.dir_vect - normal_atIntercectPoint * (2.0 * Dot_mult(ray.dir_vect, normal_atIntercectPoint));
-    reflectedRay = normalize_point(reflectedRay);
+
 
     p.set_color(color[0] *coEfficients[0],color[1]*coEfficients[0],color[2]*coEfficients[0]);
 
     for(int i=0; i<lights.size(); i++)
     {
-        point lightToInsectDir = lights[i].p - intersecting_point;
+        point lightToInsectDir = intersecting_point - lights[i].p;
         lightToInsectDir = normalize_point(lightToInsectDir);
         double lambert = 0.0,phong = 0.0;
-        Ray L(intersecting_point + (lightToInsectDir * 0.01), lightToInsectDir);
+        Ray L(lights[i].p, lightToInsectDir);
         // point Vvect = normalize_point(intersecting_point * (-1.0));
-        point Vvect = normalize_point( lightToInsectDir - intersecting_point);
-       //point Vvect = normalize_point( intersecting_point - lightToInsectDir);
+        //point Vvect = normalize_point( lightToInsectDir - intersecting_point);
+       point Vvect = normalize_point (pos - intersecting_point);
         point Rvect = normalize_point(L.dir_vect - normal_atIntercectPoint *(Dot_mult(L.dir_vect,normal_atIntercectPoint)*2.0) );
         bool obscured = false;
-
+        double l = objects[nearest]->getTvalue(L);
         for(int j=0; j<objects.size(); j++)
         {
+            if(j == nearest) continue;
             double isobscured = objects[j]->getTvalue(L);
-            if(isobscured > 0)
+            if(isobscured < (l - 0.000001) && isobscured > 0 )  // need to change
             {
                 obscured = true;
                 break;
@@ -206,10 +209,10 @@ void object::intersect_method(Ray &ray,double t, pixelColor &p,int level)
 
         if(!obscured)
         {
-            lambert = coEfficients[1] * Dot_mult(L.dir_vect,normal_atIntercectPoint);
-            phong = coEfficients[2] * pow(Dot_mult(Rvect,Vvect),shine);
-            lambert = max(0.0,lambert);
-            phong = max(0.0,phong);
+            lambert = max(0.0,coEfficients[1] * Dot_mult(L.dir_vect*(-1.0),normal_atIntercectPoint));
+            phong = coEfficients[2] * pow(max(0.0,Dot_mult(Rvect,Vvect)),shine);
+            //lambert = max(0.0,lambert);
+            //phong = max(0.0,phong);
         }
 
         p.R +=  ( phong*lights[i].R + lambert*lights[i].R) * color[0];
@@ -218,7 +221,33 @@ void object::intersect_method(Ray &ray,double t, pixelColor &p,int level)
 
         //cout << p.R << ' ' << p.G << ' ' << p.B << endl;
 
+
+
+
     }
+
+    point reflectedRay = ray.dir_vect - normal_atIntercectPoint * (2.0 * Dot_mult(ray.dir_vect, normal_atIntercectPoint));
+    reflectedRay = normalize_point(reflectedRay);
+
+    if(level < recursion_level)
+        {
+
+            point intersect_reflect = intersecting_point + reflectedRay;
+            Ray recur_reflect(intersect_reflect,reflectedRay);
+            vector<double> nearest_t = get_nearest_intersectingObj(recur_reflect);
+            //int nearest_if  = nearest_t[0];
+            pixelColor p_reflect;
+            p_reflect.set_color(0.0,0.0,0.0);
+            if(nearest_t[0] != -1)
+            {
+                objects[nearest_t[0]]->intersect_method(recur_reflect,nearest_t[1],p_reflect,level+1,nearest_t[0]);
+
+                p.R += p_reflect.R * coEfficients[3];
+                p.G += p_reflect.G * coEfficients[3];
+                p.B += p_reflect.R * coEfficients[3];
+            }
+        }
+
     p.set_color(max(0.0,min(p.R,1.0)), max(0.0,min(p.G,1.0)), max(0.0,min(p.B,1.0)));
 
 }
@@ -278,10 +307,12 @@ public:
         double t1 = (- 2 * Dot_mult(Rd,Ro) + disc)/2;
         double t2 = (- 2 * Dot_mult(Rd,Ro) - disc)/2;
         //std::cout << "t = " << t1 << " " << t2 << std::endl;
-        if(t1>t2)
+        if(t2 < 0) return t1;
+        else return t2;
+        /*if(t1>t2)
             return t2;
         else
-            return t1;
+            return t1;/*/
     }
 };
 
@@ -499,7 +530,7 @@ public:
         reference_point.z = 0;
         tileWidth = tilesize;
         no_of_tiles = floor_Width/tilesize;
-        set_properties(0,0,0,0.4, 0.2, 0.1, 0.3,5);
+        set_properties(0,0,0,0.4, 0.2, 0.2, 0.2,10);
     }
 
     void draw()
